@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>短網址產生器</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    
+    .container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      padding: 40px;
+      max-width: 500px;
+      width: 100%;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 30px;
+      font-size: 28px;
+    }
+    
+    .input-group {
+      margin-bottom: 20px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #555;
+      font-weight: 500;
+      font-size: 14px;
+    }
+    
+    input {
+      width: 100%;
+      padding: 14px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 16px;
+      transition: border-color 0.3s;
+    }
+    
+    input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    .hint {
+      font-size: 12px;
+      color: #999;
+      margin-top: 5px;
+    }
+    
+    button {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      margin-top: 10px;
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+    
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .result {
+      margin-top: 25px;
+      padding: 20px;
+      border-radius: 10px;
+      display: none;
+      animation: slideIn 0.3s ease;
+    }
+    
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .result.success {
+      background: #d4edda;
+      border: 2px solid #c3e6cb;
+      color: #155724;
+    }
+    
+    .result.error {
+      background: #f8d7da;
+      border: 2px solid #f5c6cb;
+      color: #721c24;
+    }
+    
+    .short-url {
+      font-size: 18px;
+      font-weight: 600;
+      word-break: break-all;
+      margin: 10px 0;
+      padding: 12px;
+      background: rgba(255,255,255,0.7);
+      border-radius: 8px;
+    }
+    
+    .copy-hint {
+      font-size: 13px;
+      color: #28a745;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔗 短網址產生器</h1>
+    
+    <div class="input-group">
+      <label for="longUrl">網址</label>
+      <input type="url" id="longUrl" placeholder="https://example.com/very/long/url" value="<?= urlParam ?>">
+    </div>
+    
+    <div class="input-group">
+      <label for="alias">自訂短碼 (選填)</label>
+      <input type="text" id="alias" placeholder="my-link">
+      <div class="hint">4-12 個字元，只能使用小寫字母、數字和連字號</div>
+    </div>
+    
+    <button id="createBtn" onclick="createShortUrl()">建立短網址</button>
+    
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    function createShortUrl() {
+      const btn = document.getElementById('createBtn');
+      const resultDiv = document.getElementById('result');
+      const longUrl = document.getElementById('longUrl').value.trim();
+      const alias = document.getElementById('alias').value.trim();
+      
+      if (!longUrl) {
+        showResult('請輸入網址', 'error');
+        return;
+      }
+      
+      // Validate URL format
+      try {
+        new URL(longUrl);
+      } catch {
+        showResult('請輸入有效的網址格式', 'error');
+        return;
+      }
+      
+      btn.disabled = true;
+      btn.textContent = '建立中...';
+      resultDiv.style.display = 'none';
+      
+      google.script.run
+        .withSuccessHandler(function(response) {
+          btn.disabled = false;
+          btn.textContent = '建立短網址';
+          
+          if (response.success) {
+            showResult(
+              '短網址已建立並複製到剪貼簿！<div class="short-url">' + response.shortUrl + '</div><div class="copy-hint">✓ 已複製到剪貼簿</div>',
+              'success'
+            );
+            
+            // Copy to clipboard
+            copyToClipboard(response.shortUrl);
+            
+            // Clear alias input
+            document.getElementById('alias').value = '';
+          } else {
+            showResult('建立失敗: ' + response.error, 'error');
+          }
+        })
+        .withFailureHandler(function(error) {
+          btn.disabled = false;
+          btn.textContent = '建立短網址';
+          showResult('錯誤: ' + error.message, 'error');
+        })
+        .createShortUrlFromWebApp(longUrl, alias);
+    }
+    
+    function showResult(message, type) {
+      const resultDiv = document.getElementById('result');
+      resultDiv.innerHTML = message;
+      resultDiv.className = 'result ' + type;
+      resultDiv.style.display = 'block';
+    }
+    
+    function copyToClipboard(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text);
+      } else {
+        // Fallback for older browsers
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = 0;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+    }
+    
+    // Enter key to submit
+    document.getElementById('longUrl').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') createShortUrl();
+    });
+    
+    document.getElementById('alias').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') createShortUrl();
+    });
+  </script>
+</body>
+</html>
