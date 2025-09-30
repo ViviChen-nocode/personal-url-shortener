@@ -1,0 +1,22 @@
+{
+    "manifest_version": 3,
+    "name": "短網址產生器",
+    "version": "1.0",
+    "description": "一鍵建立個人短網址",
+    "permissions": [
+      "activeTab",
+      "clipboardWrite"
+    ],
+    "host_permissions": [
+      "https://go.yourdomain.com/*"
+    ],
+    "action": {
+      "default_popup": "popup.html",
+      "default_title": "建立短網址"
+    },
+    "icons": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  }
